@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -10,8 +12,10 @@ import (
 	"golang.org/x/net/html"
 )
 
-func downloadFile(filename string) {
-	url := "http://192.168.82.1:4501/logfiles/" + filename
+const HOST = "192.168.0.24"
+
+func downloadFile(filename string, destDirectory string) {
+	url := "http://" + HOST + ":4501/logfiles/" + filename
 	fmt.Println("Downloading file", url)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -19,21 +23,21 @@ func downloadFile(filename string) {
 	}
 	defer resp.Body.Close()
 
-	file, err := os.Create(filename)
+	file, err := os.Create(destDirectory + "/" + filename)
 	if err != nil {
 		return
 	}
 	defer file.Close()
 
-	resp.Write(file)
+	io.Copy(file, resp.Body)
 }
 
 // Retrieve each individual file
-func retrievelogFiles(hrefs []string) {
+func retrievelogFiles(hrefs []string, destDirectory string) {
 	// Iterate over all of the Token's attributes until we find an "href"
-	downloadFile(hrefs[0])
+	downloadFile(hrefs[3], destDirectory)
 	//	for _, href := range hrefs {
-	//		downloadFile(href)
+	//		downloadFile(href, destDirectory)
 	//	}
 
 }
@@ -56,14 +60,13 @@ func getHref(t html.Token) (ok bool, href string) {
 func getAvailableLogFiles() (hrefs []string, err error) {
 	hrefs = make([]string, 0)
 
-	resp, err := http.Get("http://192.168.82.1:4501/logfiles/")
+	resp, err := http.Get("http://" + HOST + ":4501/logfiles/")
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
-		fmt.Println("Received link data")
 
 		z := html.NewTokenizer(resp.Body)
 
@@ -98,8 +101,11 @@ func getAvailableLogFiles() (hrefs []string, err error) {
 
 func main() {
 
+	if len(os.Args) != 2 {
+		log.Fatal("Usage: logpuller destDirectory")
+	}
 	//	for {
-	conn, err := net.Dial("tcp", "192.168.82.1:4501")
+	conn, err := net.Dial("tcp", HOST+":4501")
 	if err != nil { //error connecting to kismet server
 		fmt.Println("Error connecting to kismet server.")
 		time.Sleep(time.Millisecond * 60000) //We will try to connect once a minute
@@ -112,7 +118,7 @@ func main() {
 	if len(hrefs) == 0 || err != nil {
 		fmt.Println("No log files fount")
 	} else {
-		retrievelogFiles(hrefs)
+		retrievelogFiles(hrefs, os.Args[1])
 	}
 	conn.Close() //close the connection
 	//time.Sleep(time.Millisecond * 60000) //We will try to connect once a minute
