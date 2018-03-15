@@ -35,10 +35,10 @@ func downloadFile(filename string, destDirectory string) {
 // Retrieve each individual file
 func retrievelogFiles(hrefs []string, destDirectory string) {
 	// Iterate over all of the Token's attributes until we find an "href"
-	downloadFile(hrefs[3], destDirectory)
-	//	for _, href := range hrefs {
-	//		downloadFile(href, destDirectory)
-	//	}
+	//downloadFile(hrefs[3], destDirectory)
+	for _, href := range hrefs {
+		downloadFile(href, destDirectory)
+	}
 
 }
 
